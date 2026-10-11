@@ -60,12 +60,8 @@ export default function LeadOSDashboard() {
       />
 
       {/* Main Workspace Canvas */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#f8fafc]">
-        <div
-          className={`h-full flex-col min-w-0 flex-1 ${
-            currentTab === "discover" ? "flex" : "hidden"
-          }`}
-        >
+      <main className="flex-1 min-w-0 h-full overflow-y-auto bg-[#f8fafc]">
+        <div className={currentTab === "discover" ? "block" : "hidden"}>
           <DiscoveryView
             onSelectCompany={(id) => setSelectedCompanyId(id)}
             onLeadSavedChange={refreshSavedCount}

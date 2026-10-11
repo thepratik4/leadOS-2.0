@@ -47,7 +47,7 @@ export function SettingsView() {
   }, [loadHealth]);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-6 space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

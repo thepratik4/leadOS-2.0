@@ -10,12 +10,14 @@ coverage/
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
 
 # Next.js build
 .next/
 out/
 build/
 dist/
+*.tsbuildinfo
 
 # Environment files
 .env

@@ -1,0 +1,6 @@
+{
+  "name": "LeadOS",
+  "description": "Evidence-first B2B prospecting platform with verifiable claims, transparent scoring, and source traceability.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.logging import logger
 from app.models.company import Company
 from app.models.evidence import Evidence
 from app.schemas.evidence import EvidenceResponse, VerifyClaimRequest
@@ -49,11 +50,40 @@ async def verify_new_claim(
             detail=f"Company with ID '{company_id}' not found.",
         )
 
-    ev = await evidence_service.verify_and_record_claim(
-        db=db,
-        company_id=company_id,
-        claim_type=request.claim_type,
-        claim_value=request.claim_value,
-        source_url=request.source_url,
+    # Check for existing duplicate verification request for this company and source
+    stmt_existing = (
+        select(Evidence)
+        .where(
+            Evidence.company_id == company_id,
+            Evidence.claim_type == request.claim_type,
+            Evidence.claim_value == request.claim_value,
+            Evidence.source_url == request.source_url,
+        )
+        .order_by(Evidence.retrieval_timestamp.desc())
+        .limit(1)
     )
-    return EvidenceResponse.model_validate(ev)
+    existing_res = await db.execute(stmt_existing)
+    existing_evidence = existing_res.scalar_one_or_none()
+    if existing_evidence:
+        return EvidenceResponse.model_validate(existing_evidence)
+
+    try:
+        ev = await evidence_service.verify_and_record_claim(
+            db=db,
+            company_id=company_id,
+            claim_type=request.claim_type,
+            claim_value=request.claim_value,
+            source_url=request.source_url,
+        )
+        return EvidenceResponse.model_validate(ev)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+    except Exception as e:
+        logger.exception("Unexpected error verifying claim for company %s: %s", company_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify claim against source.",
+        ) from e

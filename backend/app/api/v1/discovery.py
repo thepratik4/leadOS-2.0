@@ -3,6 +3,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.logging import logger
 from app.models.search_run import SearchRun
 from app.schemas.discovery import (
     DiscoverySearchRequest,
@@ -33,10 +34,11 @@ async def search_companies(
             detail=str(re),
         )
     except Exception as e:
+        logger.exception("Unexpected error during discovery search: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected discovery error occurred: {e!s}",
-        )
+            detail="An unexpected error occurred during company discovery.",
+        ) from e
 
 
 @router.get("/history", response_model=list[SearchRunResponse])

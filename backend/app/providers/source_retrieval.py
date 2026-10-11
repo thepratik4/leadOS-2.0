@@ -93,54 +93,59 @@ class SourceRetrievalService:
                                 error_reason=f"Redirect rejected by SSRF guard: {hop_reason}",
                             )
 
-                        response = await client.get(current_url, headers=headers)
+                        async with client.stream("GET", current_url, headers=headers) as response:
+                            # Handle redirect
+                            if response.is_redirect and "location" in response.headers:
+                                redirect_count += 1
+                                if redirect_count > max_redirects:
+                                    return RetrievedSourceContent(
+                                        final_url=current_url,
+                                        status_code=response.status_code,
+                                        title=None,
+                                        text_content="",
+                                        retrieval_timestamp=now,
+                                        headers={},
+                                        error_reason="Exceeded maximum allowed redirects (3).",
+                                    )
+                                # Resolve relative redirects
+                                current_url = str(response.url.join(response.headers["location"]))
+                                continue
 
-                        # Handle redirect
-                        if response.is_redirect and "location" in response.headers:
-                            redirect_count += 1
-                            if redirect_count > max_redirects:
+                            # Terminal response reached
+                            if response.status_code != 200:
                                 return RetrievedSourceContent(
-                                    final_url=current_url,
+                                    final_url=str(response.url),
                                     status_code=response.status_code,
                                     title=None,
                                     text_content="",
                                     retrieval_timestamp=now,
-                                    headers={},
-                                    error_reason="Exceeded maximum allowed redirects (3).",
+                                    headers=dict(response.headers),
+                                    error_reason=f"HTTP server responded with status code {response.status_code}",
                                 )
-                            # Resolve relative redirects
-                            current_url = str(response.url.join(response.headers["location"]))
-                            continue
 
-                        # Terminal response reached
-                        if response.status_code != 200:
-                            return RetrievedSourceContent(
-                                final_url=str(response.url),
-                                status_code=response.status_code,
-                                title=None,
-                                text_content="",
-                                retrieval_timestamp=now,
-                                headers=dict(response.headers),
-                                error_reason=f"HTTP server responded with status code {response.status_code}",
-                            )
+                            # Validate content type
+                            content_type = response.headers.get("content-type", "").lower()
+                            if "html" not in content_type and "text" not in content_type:
+                                return RetrievedSourceContent(
+                                    final_url=str(response.url),
+                                    status_code=response.status_code,
+                                    title=None,
+                                    text_content="",
+                                    retrieval_timestamp=now,
+                                    headers=dict(response.headers),
+                                    error_reason=f"Non-HTML Content-Type '{content_type}' is not readable as textual evidence.",
+                                )
 
-                        # Validate content type
-                        content_type = response.headers.get("content-type", "").lower()
-                        if "html" not in content_type and "text" not in content_type:
-                            return RetrievedSourceContent(
-                                final_url=str(response.url),
-                                status_code=response.status_code,
-                                title=None,
-                                text_content="",
-                                retrieval_timestamp=now,
-                                headers=dict(response.headers),
-                                error_reason=f"Non-HTML Content-Type '{content_type}' is not readable as textual evidence.",
-                            )
+                            # Stream response body bounded to max_bytes so oversized responses do not load fully into memory
+                            chunks = []
+                            total_bytes = 0
+                            async for chunk in response.aiter_bytes():
+                                chunks.append(chunk)
+                                total_bytes += len(chunk)
+                                if total_bytes >= self.max_bytes:
+                                    break
 
-                        # Validate size
-                        raw_bytes = response.content
-                        if len(raw_bytes) > self.max_bytes:
-                            raw_bytes = raw_bytes[: self.max_bytes]
+                            raw_bytes = b"".join(chunks)[: self.max_bytes]
 
                         # Parse HTML
                         try:

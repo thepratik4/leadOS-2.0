@@ -3,6 +3,7 @@ import io
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -122,7 +123,20 @@ async def save_lead(
         )
         db.add(lead)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing_stmt = select(SavedLead).where(SavedLead.company_id == data.company_id)
+        existing_res = await db.execute(existing_stmt)
+        lead = existing_res.scalar_one_or_none()
+        if lead:
+            lead.notes = data.notes or lead.notes
+            lead.status = data.status or lead.status
+            await db.commit()
+        else:
+            raise
+
     await db.refresh(lead)
 
     v_count = sum(1 for e in company.evidence if e.verification_status == "verified")

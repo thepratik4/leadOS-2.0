@@ -38,9 +38,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+export interface RerunQueryItem {
+  query: string;
+  id: number;
+}
+
 interface DiscoveryViewProps {
   onSelectCompany: (companyId: string) => void;
   onLeadSavedChange: () => void;
+  rerunQuery?: RerunQueryItem | null;
 }
 
 const PRESET_QUERIES = [
@@ -101,6 +107,7 @@ function sanitizeCsv(val: string | number | null | undefined): string {
 export function DiscoveryView({
   onSelectCompany,
   onLeadSavedChange,
+  rerunQuery,
 }: DiscoveryViewProps) {
   // Query & Filter states
   const [query, setQuery] = React.useState("B2B SaaS hiring engineering in United States");
@@ -118,35 +125,55 @@ export function DiscoveryView({
   const [searchResponse, setSearchResponse] = React.useState<DiscoverySearchResponse | null>(null);
   const [savingCompanyId, setSavingCompanyId] = React.useState<string | null>(null);
 
+  // Track last executed rerun object to allow repeated reruns of the same query
+  const lastExecutedRerunRef = React.useRef<RerunQueryItem | null>(null);
+
   // Execute discovery search
-  const handleSearch = async (e?: React.FormEvent) => {
+  const performSearch = React.useCallback(
+    async (searchQuery?: string) => {
+      const q = (searchQuery !== undefined ? searchQuery : query).trim();
+      if (!q || q.length < 2) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const resp = await api.searchCompanies({
+          query: q,
+          industry: industry === "All Industries" ? undefined : industry,
+          geography: geography === "All Locations" ? undefined : geography,
+          employee_range: companySize === "All Sizes" ? undefined : companySize,
+          buying_signal: buyingSignal === "All Signals" ? undefined : buyingSignal,
+          limit,
+          verify_sources: verifySources,
+        });
+        setSearchResponse(resp);
+      } catch (err: unknown) {
+        const message =
+          typeof err === "object" && err !== null && "message" in err
+            ? (err as { message: string }).message
+            : "Discovery search failed. Please verify provider connectivity.";
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [query, industry, geography, companySize, buyingSignal, limit, verifySources]
+  );
+
+  const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!query.trim() || query.trim().length < 2) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const resp = await api.searchCompanies({
-        query: query.trim(),
-        industry: industry === "All Industries" ? undefined : industry,
-        geography: geography === "All Locations" ? undefined : geography,
-        employee_range: companySize === "All Sizes" ? undefined : companySize,
-        buying_signal: buyingSignal === "All Signals" ? undefined : buyingSignal,
-        limit,
-        verify_sources: verifySources,
-      });
-      setSearchResponse(resp);
-    } catch (err: unknown) {
-      const message =
-        typeof err === "object" && err !== null && "message" in err
-          ? (err as { message: string }).message
-          : "Discovery search failed. Please verify provider connectivity.";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
+    performSearch();
   };
+
+  // Trigger search whenever the rerun value changes, including repeated reruns of the same query
+  React.useEffect(() => {
+    if (rerunQuery && rerunQuery !== lastExecutedRerunRef.current) {
+      lastExecutedRerunRef.current = rerunQuery;
+      setQuery(rerunQuery.query);
+      performSearch(rerunQuery.query);
+    }
+  }, [rerunQuery, performSearch]);
 
   // Toggle Save Lead
   const handleToggleSave = async (candidate: DiscoveryCandidateItem) => {

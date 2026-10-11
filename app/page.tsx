@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Sidebar, type NavTab } from "@/components/sidebar";
-import { DiscoveryView } from "@/components/discovery-view";
+import { DiscoveryView, type RerunQueryItem } from "@/components/discovery-view";
 import { CompanyDetailSheet } from "@/components/company-detail-sheet";
 import { SavedLeadsView } from "@/components/saved-leads-view";
 import { SearchHistoryView } from "@/components/search-history-view";
@@ -14,6 +14,7 @@ export default function LeadOSDashboard() {
   const [selectedCompanyId, setSelectedCompanyId] = React.useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [savedLeadsCount, setSavedLeadsCount] = React.useState(0);
+  const [rerunQuery, setRerunQuery] = React.useState<RerunQueryItem | null>(null);
 
   // Load saved leads count for the sidebar badge
   const refreshSavedCount = React.useCallback(async () => {
@@ -43,6 +44,7 @@ export default function LeadOSDashboard() {
 
   // Handle rerun query from history
   const handleRerunQuery = (query: string) => {
+    setRerunQuery({ query, id: Date.now() });
     setCurrentTab("discover");
   };
 
@@ -59,12 +61,17 @@ export default function LeadOSDashboard() {
 
       {/* Main Workspace Canvas */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#f8fafc]">
-        {currentTab === "discover" && (
+        <div
+          className={`h-full flex-col min-w-0 flex-1 ${
+            currentTab === "discover" ? "flex" : "hidden"
+          }`}
+        >
           <DiscoveryView
             onSelectCompany={(id) => setSelectedCompanyId(id)}
             onLeadSavedChange={refreshSavedCount}
+            rerunQuery={rerunQuery}
           />
-        )}
+        </div>
 
         {currentTab === "saved" && (
           <SavedLeadsView

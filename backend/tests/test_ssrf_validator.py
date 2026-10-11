@@ -1,3 +1,5 @@
+import socket
+
 from app.validators.ssrf_validator import (
     is_ip_private_or_restricted,
     validate_url_safe_for_retrieval,
@@ -21,7 +23,7 @@ def test_private_ip_detection():
     assert is_ip_private_or_restricted("1.1.1.1") is False
 
 
-def test_url_ssrf_blocking():
+def test_url_ssrf_blocking(monkeypatch):
     # Invalid schemes
     is_safe, msg = validate_url_safe_for_retrieval("ftp://example.com")
     assert is_safe is False
@@ -40,6 +42,16 @@ def test_url_ssrf_blocking():
     is_safe, msg = validate_url_safe_for_retrieval("http://169.254.169.254/latest/meta-data")
     assert is_safe is False
 
+    # Mock DNS resolution to return a known public IP address
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+        ],
+    )
+
     # Valid public URL
     is_safe, msg = validate_url_safe_for_retrieval("https://stripe.com")
     assert is_safe is True
+

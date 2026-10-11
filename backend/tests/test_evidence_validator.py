@@ -47,3 +47,26 @@ def test_partially_verified_status():
     status, excerpt, notes = validate_claim_against_source(claim, "offering", source_text)
 
     assert status in ("partially_verified", "unverified")
+
+
+def test_partial_substring_word_boundary_rejected():
+    # 'cat' is a substring of 'communication' and 'education', but not an isolated word.
+    # '50' is a substring of '500', but not an isolated number.
+    source_text = "Global communication and education solutions with 500 team members worldwide."
+    
+    # Direct short word claim should not match substrings
+    status_single, _, _ = validate_claim_against_source("cat", "offering", source_text)
+    assert status_single == "unverified"
+
+    # Numeric claim should not match partial numeric digits in 500
+    status_num, _, notes_num = validate_claim_against_source("50 team members", "headcount", source_text)
+    assert status_num == "unverified"
+    assert "were not found" in notes_num
+
+    # Multi-token claim with partial substrings
+    claim = "cat shelter with 50 animals"
+    status, excerpt, notes = validate_claim_against_source(claim, "offering", source_text)
+    assert status == "unverified"
+    assert "were not found" in notes
+
+

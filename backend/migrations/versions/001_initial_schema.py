@@ -36,6 +36,7 @@ def upgrade() -> None:
     op.create_index('ix_companies_name', 'companies', ['name'])
     op.create_index('ix_companies_industry', 'companies', ['industry'])
     op.create_index('ix_companies_country', 'companies', ['country'])
+    op.create_index('ix_companies_domain_industry', 'companies', ['domain', 'industry'])
 
     # 2. Evidence
     op.create_table(
@@ -57,6 +58,8 @@ def upgrade() -> None:
     )
     op.create_index('ix_evidence_company_id', 'evidence', ['company_id'])
     op.create_index('ix_evidence_verification_status', 'evidence', ['verification_status'])
+    op.create_index('ix_evidence_company_status', 'evidence', ['company_id', 'verification_status'])
+    op.create_index('ix_evidence_claim_type', 'evidence', ['claim_type'])
 
     # 3. Business Signals
     op.create_table(
@@ -72,7 +75,9 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index('ix_business_signals_company_id', 'business_signals', ['company_id'])
+    op.create_index('ix_business_signals_evidence_id', 'business_signals', ['evidence_id'])
     op.create_index('ix_business_signals_signal_type', 'business_signals', ['signal_type'])
+    op.create_index('ix_signals_company_type', 'business_signals', ['company_id', 'signal_type'])
 
     # 4. Saved Leads
     op.create_table(
@@ -101,6 +106,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     )
+    op.create_index('ix_search_runs_created_at', 'search_runs', ['created_at'])
 
 
 def downgrade() -> None:

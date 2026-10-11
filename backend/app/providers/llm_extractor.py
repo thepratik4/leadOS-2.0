@@ -80,10 +80,12 @@ Respond with ONLY valid JSON array adhering to this schema:
 Raw Text:
 {excerpt}
 """
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"x-goog-api-key": self.api_key}
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.post(
                 url,
+                headers=headers,
                 json={
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {

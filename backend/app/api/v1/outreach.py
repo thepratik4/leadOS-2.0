@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.logging import logger
 from app.schemas.outreach import OutreachDraftRequest, OutreachDraftResponse
 from app.services.outreach_service import outreach_service
 
@@ -27,7 +28,8 @@ async def draft_evidence_grounded_outreach(
             detail=str(ve),
         )
     except Exception as e:
+        logger.exception("Unexpected error generating outreach for company %s: %s", company_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Outreach generation error: {e!s}",
-        )
+            detail="Failed to generate outreach draft.",
+        ) from e

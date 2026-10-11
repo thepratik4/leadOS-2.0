@@ -55,6 +55,15 @@ def extract_salient_tokens(claim: str) -> list[str]:
     return [t for t in tokens if t not in stop_words]
 
 
+def is_word_match(token: str, text: str) -> bool:
+    """Checks if a token or numeric term appears as an isolated word/token in text,
+    preventing partial substring matches (e.g. 'cat' in 'education' or '50' in '500')."""
+    if not token or not text:
+        return False
+    pattern = rf"(?<!\w){re.escape(token.lower())}(?!\w)"
+    return bool(re.search(pattern, text.lower()))
+
+
 def validate_claim_against_source(
     claim_value: str,
     claim_type: str,
@@ -74,11 +83,11 @@ def validate_claim_against_source(
     norm_claim = normalize_text_for_matching(claim_value)
     norm_source = normalize_text_for_matching(source_text)
 
-    # 1. Direct exact or substring match
-    if norm_claim in norm_source:
-        idx = norm_source.find(norm_claim)
-        start = max(0, idx - 60)
-        end = min(len(source_text), idx + len(claim_value) + 60)
+    # 1. Direct exact or full phrase match with word boundaries
+    direct_match = re.search(rf"(?<!\w){re.escape(norm_claim)}(?!\w)", norm_source)
+    if direct_match:
+        start = max(0, direct_match.start() - 60)
+        end = min(len(source_text), direct_match.end() + 60)
         excerpt = source_text[start:end].strip()
         return (
             "verified",
@@ -97,13 +106,13 @@ def validate_claim_against_source(
             "Claim does not contain sufficient salient keywords for verification.",
         )
 
-    # Count how many salient tokens appear in source
-    matched_tokens = [t for t in salient_tokens if t in norm_source]
+    # Count how many salient tokens appear in source using word-boundary matching
+    matched_tokens = [t for t in salient_tokens if is_word_match(t, norm_source)]
     token_ratio = len(matched_tokens) / len(salient_tokens) if salient_tokens else 0.0
 
     # If numbers were part of the claim (e.g. "$15M", "50-100", "2024"), they MUST be present
     if numbers:
-        matched_numbers = [n for n in numbers if n.lower() in norm_source]
+        matched_numbers = [n for n in numbers if is_word_match(n, norm_source)]
         if not matched_numbers:
             return (
                 "unverified",
@@ -118,16 +127,16 @@ def validate_claim_against_source(
 
     for p in paragraphs:
         p_lower = p.lower()
-        score = sum(1 for t in matched_tokens if t in p_lower)
+        score = sum(1 for t in matched_tokens if is_word_match(t, p_lower))
         if numbers:
-            score += sum(2 for n in numbers if n.lower() in p_lower)
+            score += sum(2 for n in numbers if is_word_match(n, p_lower))
         if score > best_score:
             best_score = score
             best_para = p
 
     # Determine status
     if token_ratio >= 0.75 and (
-        not numbers or any(n.lower() in best_para.lower() for n in numbers)
+        not numbers or any(is_word_match(n, best_para) for n in numbers)
     ):
         excerpt = best_para[:350]
         return (

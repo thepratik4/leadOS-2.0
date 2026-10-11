@@ -65,10 +65,16 @@ export function CompanyDetailSheet({
 
   // Fetch company details & dossier when opened
   React.useEffect(() => {
+    // Reset company-specific states on any companyId change
+    setCompany(null);
+    setDossier(null);
+    setOutreach(null);
+    setVerifyNotice(null);
+    setCustomClaimValue("");
+    setActiveTab("score");
+    setCopied(false);
+
     if (!companyId) {
-      setCompany(null);
-      setDossier(null);
-      setOutreach(null);
       return;
     }
 

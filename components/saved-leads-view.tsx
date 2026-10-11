@@ -13,6 +13,7 @@ import {
   Building2,
   MapPin,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import { api, type SavedLeadResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -49,16 +50,20 @@ export function SavedLeadsView({
 }: SavedLeadsViewProps) {
   const [leads, setLeads] = React.useState<SavedLeadResponse[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [filterStatus, setFilterStatus] = React.useState("all");
   const [editingLeadId, setEditingLeadId] = React.useState<string | null>(null);
   const [editingNotes, setEditingNotes] = React.useState("");
 
   const loadSavedLeads = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const data = await api.listSavedLeads();
       setLeads(data);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load saved leads";
+      setError(msg);
       console.error("Failed to load saved leads", err);
     } finally {
       setIsLoading(false);
@@ -162,8 +167,31 @@ export function SavedLeadsView({
         </div>
       )}
 
+      {/* Error State */}
+      {!isLoading && error && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50/50 p-12 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-3">
+            <AlertCircle className="size-6" />
+          </div>
+          <h3 className="text-sm font-semibold text-red-800">
+            Failed to load saved leads
+          </h3>
+          <p className="text-xs text-red-600 max-w-sm mt-1 leading-relaxed">
+            {error}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadSavedLeads}
+            className="mt-4 text-xs"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!isLoading && leads.length === 0 && (
+      {!isLoading && !error && leads.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-12 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 mb-3">
             <BookmarkCheck className="size-6" />
@@ -178,7 +206,7 @@ export function SavedLeadsView({
       )}
 
       {/* Leads Table */}
-      {!isLoading && leads.length > 0 && (
+      {!isLoading && !error && leads.length > 0 && (
         <div className="rounded-lg border border-slate-200 bg-white shadow-xs overflow-hidden">
           <Table>
             <TableHeader>

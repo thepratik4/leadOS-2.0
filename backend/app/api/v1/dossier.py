@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.logging import logger
 from app.schemas.dossier import CompanyDossierResponse
 from app.services.dossier_service import dossier_service
 
@@ -22,7 +23,8 @@ async def get_company_dossier(
             detail=str(ve),
         )
     except Exception as e:
+        logger.exception("Unexpected error generating dossier for company %s: %s", company_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate dossier: {e!s}",
-        )
+            detail="Failed to generate company dossier.",
+        ) from e

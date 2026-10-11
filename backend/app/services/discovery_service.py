@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from datetime import UTC, datetime
 
@@ -84,7 +85,7 @@ class DiscoveryService:
                 company = result.scalar_one_or_none()
 
                 # Clean name from title (e.g. "Stripe: Financial Infrastructure" -> "Stripe")
-                raw_name = raw.title.split("|")[0].split("-")[0].split(":")[0].strip()
+                raw_name = re.split(r"\s+[|\-–—:]\s+|:\s", raw.title, maxsplit=1)[0].strip()
                 clean_name = raw_name if len(raw_name) > 1 else domain.capitalize()
 
                 if not company:

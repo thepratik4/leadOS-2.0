@@ -128,12 +128,16 @@ export function DiscoveryView({
   // Track last executed rerun object to allow repeated reruns of the same query
   const lastExecutedRerunRef = React.useRef<RerunQueryItem | null>(null);
 
+  // Track active search request to ignore completions from superseded requests
+  const activeRequestIdRef = React.useRef(0);
+
   // Execute discovery search
   const performSearch = React.useCallback(
     async (searchQuery?: string) => {
       const q = (searchQuery !== undefined ? searchQuery : query).trim();
       if (!q || q.length < 2) return;
 
+      const requestId = ++activeRequestIdRef.current;
       setIsLoading(true);
       setError(null);
 
@@ -147,15 +151,21 @@ export function DiscoveryView({
           limit,
           verify_sources: verifySources,
         });
-        setSearchResponse(resp);
+        if (requestId === activeRequestIdRef.current) {
+          setSearchResponse(resp);
+        }
       } catch (err: unknown) {
-        const message =
-          typeof err === "object" && err !== null && "message" in err
-            ? (err as { message: string }).message
-            : "Discovery search failed. Please verify provider connectivity.";
-        setError(message);
+        if (requestId === activeRequestIdRef.current) {
+          const message =
+            typeof err === "object" && err !== null && "message" in err
+              ? (err as { message: string }).message
+              : "Discovery search failed. Please verify provider connectivity.";
+          setError(message);
+        }
       } finally {
-        setIsLoading(false);
+        if (requestId === activeRequestIdRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [query, industry, geography, companySize, buyingSignal, limit, verifySources]

@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
-# Copy dependency specifications
-COPY pyproject.toml .
+# Copy project configuration, documentation, and package source
+COPY pyproject.toml README.md ./
+COPY app ./app
 
-# Install dependencies
+# Install dependencies and local package
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir . && \
     pip install --no-cache-dir ddgs aiosqlite beautifulsoup4

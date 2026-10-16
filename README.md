@@ -9,6 +9,7 @@ LeadOS is engineered around one defining principle:
 
 ### 🌐 Live Deployment & Submission Artifacts
 - **Live Web Application**: [https://leados-v2-ashy.vercel.app/](https://leados-v2-ashy.vercel.app/)
+- **Video Walkthrough (Loom)**: [https://www.loom.com/share/317bb5e544544ca7b7f3622a72cc0e80](https://www.loom.com/share/317bb5e544544ca7b7f3622a72cc0e80)
 - **Live Interactive API Docs**: [https://leados-v2-ashy.vercel.app/docs](https://leados-v2-ashy.vercel.app/docs)
 - **Section 4 Written Responses**: [`BUSINESS_UNDERSTANDING.md`](./BUSINESS_UNDERSTANDING.md)
 - **Interactive Technical Walkthrough (Jupyter)**: [`demo_notebook.ipynb`](./demo_notebook.ipynb)

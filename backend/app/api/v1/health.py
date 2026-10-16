@@ -10,15 +10,18 @@ router = APIRouter(tags=["Health"])
 
 
 @router.get("/health")
-async def health_check(db: AsyncSession = Depends(get_db)):
-    # Test database connectivity
+async def health_check():
+    # Test database connectivity safely without letting session failures crash with 500
     db_status = "healthy"
     db_error = None
     try:
-        await db.execute(text("SELECT 1"))
+        from app.core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
     except Exception as e:
         db_status = "unhealthy"
         db_error = str(e)
+
 
     # Provider health
     provider = get_search_provider()

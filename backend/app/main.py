@@ -14,13 +14,19 @@ from app.core.logging import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} ({settings.APP_ENV})...")
-    # Auto-initialize database tables if not yet created
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database schemas initialized.")
+    # Auto-initialize database tables safely
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database schemas initialized.")
+    except Exception as e:
+        logger.warning(f"Database schema auto-initialization deferred or failed: {e!s}")
     yield
     logger.info(f"Shutting down {settings.APP_NAME}...")
-    await async_engine.dispose()
+    try:
+        await async_engine.dispose()
+    except Exception:
+        pass
 
 
 app = FastAPI(
@@ -38,7 +44,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(settings.CORS_ORIGINS) if settings.CORS_ORIGINS else [],
+    allow_origins=list(settings.CORS_ORIGINS) if settings.CORS_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +74,24 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             },
         },
     )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    logger.error(f"Unhandled error on {request.method} {request.url.path}: {exc}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": str(exc) or "Internal server error",
+                "type": exc.__class__.__name__,
+            },
+        },
+    )
+
 
 
 # Mount versioned API routes

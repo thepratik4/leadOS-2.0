@@ -15,9 +15,12 @@ engine_kwargs = {
     "future": True,
 }
 
-# SQLite specific pragmas if using SQLite
+# SQLite specific pragmas if using SQLite, or serverless pool settings for PostgreSQL
 if settings.DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
 
 async_engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 

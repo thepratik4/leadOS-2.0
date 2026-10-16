@@ -1,7 +1,16 @@
+import os
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def get_default_database_url() -> str:
+    # On Vercel or AWS Lambda, the workspace root is read-only.
+    # Writable SQLite must be located in /tmp/
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return "sqlite+aiosqlite:////tmp/leados.db"
+    return "sqlite+aiosqlite:///./leados.db"
 
 
 class Settings(BaseSettings):
@@ -20,6 +29,7 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: list[str] = [
+        "*",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
@@ -28,9 +38,28 @@ class Settings(BaseSettings):
 
     # Database: Default to sqlite+aiosqlite for local self-contained runs, or postgresql+asyncpg for production
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./leados.db",
+        default_factory=get_default_database_url,
         description="Async SQLAlchemy database connection URL",
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v: str | None) -> str:
+        if not v:
+            return get_default_database_url()
+        url = str(v).strip()
+        # If deploying to Vercel/Lambda with relative sqlite, redirect to /tmp
+        if (os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")) and url.startswith("sqlite") and "/./" in url:
+            return "sqlite+aiosqlite:////tmp/leados.db"
+        # Standardize PostgreSQL URLs to asyncpg
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # asyncpg does not accept sslmode query parameter
+        if "sslmode=" in url:
+            url = url.replace("sslmode=require", "").replace("?&", "?").rstrip("?&")
+        return url
 
     # Search Provider configuration
     SEARCH_PROVIDER: Literal["ddgs", "brave", "serpapi", "tavily"] = "ddgs"
@@ -49,3 +78,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

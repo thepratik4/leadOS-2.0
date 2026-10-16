@@ -8,8 +8,8 @@ LeadOS is engineered around one defining principle:
 ---
 
 ### 🌐 Live Deployment & Submission Artifacts
-- **Live Web Application**: [https://leados-20.vercel.app/](https://leados-20.vercel.app/)
-- **Live Interactive API Docs**: [https://leados-20.vercel.app/docs](https://leados-20.vercel.app/docs)
+- **Live Web Application**: [https://leados-v2-ashy.vercel.app/](https://leados-v2-ashy.vercel.app/)
+- **Live Interactive API Docs**: [https://leados-v2-ashy.vercel.app/docs](https://leados-v2-ashy.vercel.app/docs)
 - **Section 4 Written Responses**: [`BUSINESS_UNDERSTANDING.md`](./BUSINESS_UNDERSTANDING.md)
 - **Interactive Technical Walkthrough (Jupyter)**: [`demo_notebook.ipynb`](./demo_notebook.ipynb)
 - **Automated CLI Demo Script**: [`demo_walkthrough.py`](./demo_walkthrough.py)

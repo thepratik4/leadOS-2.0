@@ -7,6 +7,15 @@ LeadOS is engineered around one defining principle:
 
 ---
 
+### 🌐 Live Deployment & Submission Artifacts
+- **Live Web Application**: [https://leados-20.vercel.app/](https://leados-20.vercel.app/)
+- **Live Interactive API Docs**: [https://leados-20.vercel.app/docs](https://leados-20.vercel.app/docs)
+- **Section 4 Written Responses**: [`BUSINESS_UNDERSTANDING.md`](./BUSINESS_UNDERSTANDING.md)
+- **Interactive Technical Walkthrough (Jupyter)**: [`demo_notebook.ipynb`](./demo_notebook.ipynb)
+- **Automated CLI Demo Script**: [`demo_walkthrough.py`](./demo_walkthrough.py)
+
+---
+
 ## 1. System Architecture
 
 ```
@@ -217,7 +226,56 @@ Compiles with 0 TypeScript errors and generates optimized static routes for prod
 
 ---
 
-## 7. Known Limitations & Tradeoffs
+## 7. Interactive Demonstrations (CLI & Jupyter Notebook)
+
+Two standalone demonstration options are provided to satisfy the Caprae hiring handbook's demonstration recommendation:
+
+### Option A: Standalone CLI Demo Script
+Run the automated end-to-end Python demo from the repository root:
+```bash
+python demo_walkthrough.py
+```
+This demonstrates the four core engines without requiring web servers:
+1. **SSRF Guard**: Verifies blocked AWS cloud metadata (`169.254.169.254`), loopbacks, and RFC 1918 subnets.
+2. **Evidence Engine**: Tests exact quotation matches, numeric/metric validation, and flags fabricated claims.
+3. **Deterministic Lead Scoring**: Executes the 5-dimension mathematical algorithm [0, 100] with full breakdown.
+4. **Grounded Cold Outreach Guard**: Demonstrates citation on verified triggers and refusal on unverified signals.
+
+### Option B: Interactive Jupyter Notebook
+Open and execute the step-by-step interactive notebook:
+```bash
+# Launch in Jupyter:
+jupyter notebook demo_notebook.ipynb
+
+# Or open directly in VS Code / GitHub to inspect pre-formatted markdown and cell outputs.
+```
+
+---
+
+## 8. Data Storage Architecture (Local vs Docker vs Hosted)
+
+### How is the Database Stored Locally?
+- **Zero-Config SQLite**: By default, LeadOS uses asynchronous SQLite via `aiosqlite`.
+  - Database file location: `./backend/leados.db`
+  - Connection string: `sqlite+aiosqlite:///./leados.db`
+  - All company profiles, primary source evidence, search runs, and saved leads are stored locally in this single file. You can inspect it directly using SQLite Viewer, DBeaver, or DB Browser for SQLite.
+- **Docker Compose (PostgreSQL 16)**:
+  - If started via `docker compose up`, LeadOS provisions an enterprise PostgreSQL 16 container.
+  - Data is persisted across container restarts in the named Docker volume: `postgres_data`.
+
+### How is the Database Stored When Hosted on Vercel?
+- **Serverless Ephemeral Storage**: Vercel Serverless Functions execute in a stateless environment with a read-only root directory. For zero-config serverless testing, LeadOS automatically routes SQLite to `/tmp/leados.db` (the only writable scratch partition).
+- **Production Cloud Persistence**: For permanent, multi-user persistence in production, attach any managed cloud PostgreSQL instance (such as **Neon**, **Supabase**, or **Vercel Postgres**):
+  1. Create a free Postgres instance on Neon or Supabase.
+  2. Set the `DATABASE_URL` environment variable in your Vercel Project Settings:
+     ```env
+     DATABASE_URL=postgresql+asyncpg://user:password@ep-host.aws.neon.tech/neondb
+     ```
+  3. LeadOS's configuration engine automatically normalizes the URL for `asyncpg`, applies connection pool recycling, and runs table schemas automatically on startup.
+
+---
+
+## 9. Known Limitations & Tradeoffs
 
 1. **Website Anti-Scraping**: Public websites protected by Cloudflare Bot Management or perimeter CAPTCHAs will not yield full HTML content. In such cases, LeadOS honestly reports `status: unknown` and records the HTTP response code rather than hallucinating fake content.
 2. **Deterministic Weights**: Scoring weights (30/25/20/15/10) represent product assumptions for B2B ICP fit. In a production enterprise system, weights can be calibrated per sales persona or team ICP profile.

@@ -116,7 +116,7 @@ export function SettingsView() {
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">Docs Path</span>
                 <a
-                  href="http://localhost:8000/docs"
+                  href={typeof window !== "undefined" && window.location.port === "3000" && window.location.hostname === "localhost" ? "http://localhost:8000/docs" : "/docs"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline font-mono inline-flex items-center gap-1"

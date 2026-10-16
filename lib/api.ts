@@ -3,7 +3,33 @@
  * Interfaces with FastAPI backend at /api/v1
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+export function getApiBase(): string {
+  // 1. Server-side runtime (Next.js server / functions):
+  // Reads Vercel service binding injected into BACKEND_URL
+  if (typeof window === "undefined" && process.env.BACKEND_URL) {
+    const raw = process.env.BACKEND_URL.replace(/\/+$/, "");
+    return `${raw}/api/v1`;
+  }
+
+  // 2. Explicit public environment variable override
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+  }
+
+  // 3. Client-side browser execution on Vercel:
+  // Since top-level rewrites route /api/(.*) to the backend service,
+  // relative path /api/v1 works seamlessly on the same origin.
+  if (typeof window !== "undefined") {
+    // If running on local standard Next.js port (3000) without dev proxy, fallback to port 8000
+    if (window.location.port === "3000" && window.location.hostname === "localhost") {
+      return "http://localhost:8000/api/v1";
+    }
+    return "/api/v1";
+  }
+
+  // 4. Default fallback for local testing
+  return "http://localhost:8000/api/v1";
+}
 
 export type VerificationStatus = "verified" | "partially_verified" | "unverified" | "unknown";
 export type ScoreTier = "high" | "medium" | "low";
@@ -232,12 +258,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export const api = {
   async getHealth(): Promise<HealthStatus> {
-    const res = await fetch(`${API_BASE}/health`, { cache: "no-store" });
+    const res = await fetch(`${getApiBase()}/health`, { cache: "no-store" });
     return handleResponse<HealthStatus>(res);
   },
 
   async searchCompanies(req: DiscoverySearchRequest): Promise<DiscoverySearchResponse> {
-    const res = await fetch(`${API_BASE}/discovery/search`, {
+    const res = await fetch(`${getApiBase()}/discovery/search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
@@ -246,21 +272,21 @@ export const api = {
   },
 
   async getSearchHistory(limit = 15): Promise<SearchRunResponse[]> {
-    const res = await fetch(`${API_BASE}/discovery/history?limit=${limit}`, {
+    const res = await fetch(`${getApiBase()}/discovery/history?limit=${limit}`, {
       cache: "no-store",
     });
     return handleResponse<SearchRunResponse[]>(res);
   },
 
   async getCompanyDetails(companyId: string): Promise<CompanyDetailResponse> {
-    const res = await fetch(`${API_BASE}/companies/${companyId}`, {
+    const res = await fetch(`${getApiBase()}/companies/${companyId}`, {
       cache: "no-store",
     });
     return handleResponse<CompanyDetailResponse>(res);
   },
 
   async getCompanyEvidence(companyId: string): Promise<EvidenceResponse[]> {
-    const res = await fetch(`${API_BASE}/companies/${companyId}/evidence`, {
+    const res = await fetch(`${getApiBase()}/companies/${companyId}/evidence`, {
       cache: "no-store",
     });
     return handleResponse<EvidenceResponse[]>(res);
@@ -270,7 +296,7 @@ export const api = {
     companyId: string,
     claim: { claim_type: string; claim_value: string; source_url: string }
   ): Promise<EvidenceResponse> {
-    const res = await fetch(`${API_BASE}/companies/${companyId}/evidence/verify`, {
+    const res = await fetch(`${getApiBase()}/companies/${companyId}/evidence/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(claim),
@@ -279,7 +305,7 @@ export const api = {
   },
 
   async getCompanyDossier(companyId: string): Promise<CompanyDossierResponse> {
-    const res = await fetch(`${API_BASE}/companies/${companyId}/dossier`, {
+    const res = await fetch(`${getApiBase()}/companies/${companyId}/dossier`, {
       cache: "no-store",
     });
     return handleResponse<CompanyDossierResponse>(res);
@@ -289,7 +315,7 @@ export const api = {
     companyId: string,
     req: OutreachDraftRequest = {}
   ): Promise<OutreachDraftResponse> {
-    const res = await fetch(`${API_BASE}/companies/${companyId}/outreach`, {
+    const res = await fetch(`${getApiBase()}/companies/${companyId}/outreach`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
@@ -298,14 +324,14 @@ export const api = {
   },
 
   async listSavedLeads(): Promise<SavedLeadResponse[]> {
-    const res = await fetch(`${API_BASE}/saved-leads`, {
+    const res = await fetch(`${getApiBase()}/saved-leads`, {
       cache: "no-store",
     });
     return handleResponse<SavedLeadResponse[]>(res);
   },
 
   async saveLead(req: { company_id: string; notes?: string; status?: string }): Promise<SavedLeadResponse> {
-    const res = await fetch(`${API_BASE}/saved-leads`, {
+    const res = await fetch(`${getApiBase()}/saved-leads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
@@ -317,7 +343,7 @@ export const api = {
     savedLeadId: string,
     req: { notes?: string; status?: string }
   ): Promise<SavedLeadResponse> {
-    const res = await fetch(`${API_BASE}/saved-leads/${savedLeadId}`, {
+    const res = await fetch(`${getApiBase()}/saved-leads/${savedLeadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
@@ -326,13 +352,13 @@ export const api = {
   },
 
   async deleteSavedLead(savedLeadId: string): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${API_BASE}/saved-leads/${savedLeadId}`, {
+    const res = await fetch(`${getApiBase()}/saved-leads/${savedLeadId}`, {
       method: "DELETE",
     });
     return handleResponse<{ success: boolean; message: string }>(res);
   },
 
   getExportSavedLeadsUrl(): string {
-    return `${API_BASE}/saved-leads/export`;
+    return `${getApiBase()}/saved-leads/export`;
   },
 };

@@ -79,7 +79,7 @@ export function Sidebar({
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold tracking-tight text-slate-900 leading-none">
-                LeadOS
+                LeadOS 2.0
               </span>
               <span className="text-[10px] text-slate-500 font-medium tracking-tight truncate mt-0.5">
                 Evidence-First Prospecting
